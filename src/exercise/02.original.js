@@ -32,7 +32,7 @@ function asyncReducer(state, action) {
   }
 }
 
-const useAsync = (asyncCallback, initialState) => {
+const useAsync = (asyncCallback, initialState, dependencyList) => {
   const [state, dispatch] = React.useReducer(asyncReducer, {
     status: IDLE,
     data: null,
@@ -58,25 +58,21 @@ const useAsync = (asyncCallback, initialState) => {
       },
     )
 
-  }, [asyncCallback])
+  }, dependencyList)
 
   return state
 }
 
 function PokemonInfo({pokemonName}) {
-  const getPokemon = React.useCallback(
+  const state = useAsync(
     () => {
       if (!pokemonName) {
         return
       }
       return fetchPokemon(pokemonName)
     },
-    [pokemonName]
-  )
-
-  const state = useAsync(
-    getPokemon,
     {status: pokemonName ? PENDING : IDLE},
+    [pokemonName],
   )
 
   const {data: pokemon, status, error} = state
