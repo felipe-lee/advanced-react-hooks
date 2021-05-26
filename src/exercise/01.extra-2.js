@@ -3,27 +3,18 @@
 
 import * as React from 'react'
 
-const INCREMENT = 'INCREMENT'
-
 const countReducer = (state, action) => {
-  switch (action.type) {
-    case INCREMENT: {
-      return {...state, count: state.count + action.step}
-    }
-    default: {
-      throw new Error(`Unsupported action type: ${action.type}`)
-    }
-  }
+  return {...state, ...action}
 }
 
 function Counter({initialCount = 0, step = 1}) {
-  const [state, dispatch] = React.useReducer(countReducer, {
+  const [state, setState] = React.useReducer(countReducer, {
     count: initialCount,
   })
 
   const {count} = state
 
-  const increment = () => dispatch({type: INCREMENT, step})
+  const increment = () => setState({count: count + step})
 
   return <button onClick={increment}>{count}</button>
 }
