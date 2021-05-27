@@ -32,7 +32,7 @@ function asyncReducer(state, action) {
   }
 }
 
-const useAsync = (initialState) => {
+const useAsync = (asyncCallback, initialState, dependencyList) => {
   const [state, dispatch] = React.useReducer(asyncReducer, {
     status: IDLE,
     data: null,
@@ -40,44 +40,42 @@ const useAsync = (initialState) => {
     ...initialState,
   })
 
-  const run = React.useCallback(
-    promise => {
-      dispatch({type: PENDING})
-
-      promise.then(
-        data => {
-          dispatch({type: RESOLVED, data})
-        }
-      ).catch(error => {
-        if (error.name === 'AbortError') {
-          return
-        }
-
-        dispatch({type: REJECTED, error})
-      })
-    },
-    []
-  )
-
-  return {...state, run}
-}
-
-function PokemonInfo({pokemonName}) {
-  const {data: pokemon, status, error, run} = useAsync({
-    status: pokemonName ? 'pending' : 'idle',
-  })
-
   React.useEffect(() => {
-    if (!pokemonName) {
+    const promise = asyncCallback()
+
+    if (!promise) {
       return
     }
 
-    const controller = new AbortController();
+    dispatch({type: PENDING})
 
-    run(fetchPokemon(pokemonName, 1500, controller.signal))
+    promise.then(
+      data => {
+        dispatch({type: RESOLVED, data})
+      },
+      error => {
+        dispatch({type: REJECTED, error})
+      },
+    )
 
-    return () => controller.abort()
-  }, [pokemonName, run])
+  }, dependencyList)
+
+  return state
+}
+
+function PokemonInfo({pokemonName}) {
+  const state = useAsync(
+    () => {
+      if (!pokemonName) {
+        return
+      }
+      return fetchPokemon(pokemonName)
+    },
+    {status: pokemonName ? PENDING : IDLE},
+    [pokemonName],
+  )
+
+  const {data: pokemon, status, error} = state
 
   if (status === IDLE || !pokemonName) {
     return 'Submit a pokemon'

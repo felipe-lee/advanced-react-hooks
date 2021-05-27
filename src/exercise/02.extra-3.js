@@ -32,13 +32,31 @@ function asyncReducer(state, action) {
   }
 }
 
+const useSafeDispatch = dispatch => {
+  const mountedRef = React.useRef(false)
+
+  React.useEffect(() => {
+    mountedRef.current = true
+
+    return () => {mountedRef.current = false}
+  }, [])
+
+  return React.useCallback((...args) => {
+    if (mountedRef.current === true) {
+      dispatch(...args)
+    }
+  }, [dispatch])
+}
+
 const useAsync = (initialState) => {
-  const [state, dispatch] = React.useReducer(asyncReducer, {
+  const [state, unsafeDispatch] = React.useReducer(asyncReducer, {
     status: IDLE,
     data: null,
     error: null,
     ...initialState,
   })
+
+  const dispatch = useSafeDispatch(unsafeDispatch)
 
   const run = React.useCallback(
     promise => {
@@ -47,16 +65,13 @@ const useAsync = (initialState) => {
       promise.then(
         data => {
           dispatch({type: RESOLVED, data})
-        }
-      ).catch(error => {
-        if (error.name === 'AbortError') {
-          return
-        }
-
-        dispatch({type: REJECTED, error})
-      })
+        },
+        error => {
+          dispatch({type: REJECTED, error})
+        },
+      )
     },
-    []
+    [dispatch]
   )
 
   return {...state, run}
@@ -71,12 +86,7 @@ function PokemonInfo({pokemonName}) {
     if (!pokemonName) {
       return
     }
-
-    const controller = new AbortController();
-
-    run(fetchPokemon(pokemonName, 1500, controller.signal))
-
-    return () => controller.abort()
+    run(fetchPokemon(pokemonName))
   }, [pokemonName, run])
 
   if (status === IDLE || !pokemonName) {
