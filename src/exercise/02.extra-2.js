@@ -47,14 +47,11 @@ const useAsync = (initialState) => {
       promise.then(
         data => {
           dispatch({type: RESOLVED, data})
-        }
-      ).catch(error => {
-        if (error.name === 'AbortError') {
-          return
-        }
-
-        dispatch({type: REJECTED, error})
-      })
+        },
+        error => {
+          dispatch({type: REJECTED, error})
+        },
+      )
     },
     []
   )
@@ -71,12 +68,7 @@ function PokemonInfo({pokemonName}) {
     if (!pokemonName) {
       return
     }
-
-    const controller = new AbortController();
-
-    run(fetchPokemon(pokemonName, 1500, controller.signal))
-
-    return () => controller.abort()
+    run(fetchPokemon(pokemonName))
   }, [pokemonName, run])
 
   if (status === IDLE || !pokemonName) {
